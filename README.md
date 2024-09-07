@@ -56,4 +56,4 @@ The more info and complete source code you find on the [OpenPrinting GitHub.](ht
 
 ## More Info
 
-This repository contains the source code of my contribution in Google Summer of Code 2024 and here's my [GSOC'24 Project Report]()
+This repository contains the source code of my contribution in Google Summer of Code 2024 and here's my [GSOC'24 Project Report](https://github.com/shivamsharma2509/GSOC24)
