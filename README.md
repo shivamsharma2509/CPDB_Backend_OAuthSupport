@@ -34,9 +34,9 @@ To install all the necessary dependencies and compile the project, run the follo
  ```
  $ ./autogen
  $ ./configure
- $ ./make
- $ ./sudo make install
- $ ./sudo ldconfig
+ $ make
+ $ sudo make install
+ $ sudo ldconfig
 ```
 
 ## Testing the library
