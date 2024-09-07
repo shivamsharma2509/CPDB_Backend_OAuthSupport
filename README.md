@@ -50,4 +50,10 @@ To test the UI and run the server you can use the following command and one demo
  $ ./AuthUI
  $ ./auth_server
 ```
+# Updates and development
 
+The more info and complete source code you find on the [OpenPrinting GitHub.](https://github.com/OpenPrinting/cpdb-backend-cups).
+
+## More Info
+
+This repository contains the source code of my contribution in Google Summer of Code 2024 and here's my [GSOC'24 Project Report]()
