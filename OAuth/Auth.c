@@ -1,3 +1,17 @@
+/*
+ * Authentication functions for CUPS.
+ *
+ * Uses GNOME Online Accounts for authentication
+ */
+
+/*
+ * Include necessary headers
+ */
+
+/* 
+ * GOA API is subject to change.
+ */
+  
 #define GOA_API_IS_SUBJECT_TO_CHANGE
 #include "auth.h"
 #include <goa/goa.h>
@@ -6,18 +20,33 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* 
+ * Local server port 8080 is defined.
+ */
+
 #define PORT 8080
+
+/*
+ * Client id and secret is also defined for authentication.
+ */
+
 #define CLIENT_ID "Ov23lirB62bclUpviNM1"
 #define CLIENT_SECRET "65ca463e0d048e12a0be7e8cc36073ba5c88bbe"
 #define AUTHORIZATION_URL "https://github.com/login/oauth/authorize"
 #define TOKEN_URL "https://github.com/login/oauth/access_token"
 
-// Global variables
+/*
+ * Global variables
+ */
+
 static gchar *auth_code = NULL;
 static GoaClient *client;
 GtkWidget *token_label;  // Define token_label here
 
-// Function to handle HTTP requests
+/*
+ * Function to handle HTTP requests
+ */
+
 static enum MHD_Result handle_request(void *cls, struct MHD_Connection *connection,
                                        const char *url, const char *method,
                                        const char *version, const char *upload_data,
@@ -50,7 +79,10 @@ static enum MHD_Result handle_request(void *cls, struct MHD_Connection *connecti
     return MHD_NO;
 }
 
-// Function to start the local server
+/*
+ * Function to start the local server
+ */
+
 void start_local_server() {
     struct MHD_Daemon *daemon = MHD_start_daemon(MHD_USE_SELECT_INTERNALLY, PORT, NULL, NULL, &handle_request, NULL, MHD_OPTION_END);
     if (daemon == NULL) {
@@ -59,7 +91,10 @@ void start_local_server() {
     g_print("Local server started on port %d\n", PORT);
 }
 
-// Function to start the OAuth2 flow
+/*
+ *Function to start the OAuth2 flow
+ */
+
 void start_oauth_flow() {
     gchar *auth_url = g_strdup_printf(
         "%s?client_id=%s&redirect_uri=http://localhost:8080/callback&scope=user",
@@ -69,7 +104,10 @@ void start_oauth_flow() {
     g_free(auth_url);
 }
 
-// Callback when the GoaClient is ready
+/*
+ *Callback when the GoaClient is ready
+ */
+
 void on_goa_ready(GObject *source_object, GAsyncResult *res, gpointer user_data) {
     GError *error = NULL;
     client = goa_client_new_finish(res, &error);
@@ -86,12 +124,18 @@ void on_goa_ready(GObject *source_object, GAsyncResult *res, gpointer user_data)
     start_oauth_flow();
 }
 
-// Initialize the GoaClient
+/*
+ *Initialize the GoaClient
+ */
+
 void initialize_goa() {
     goa_client_new(NULL, on_goa_ready, NULL);
 }
 
-// Handle the access token received
+/*
+ * Handle the access token received
+ */
+
 void on_access_token_received(GObject *source_object, GAsyncResult *res, gpointer user_data) {
     GError *error = NULL;
     gchar *access_token = NULL;
@@ -117,13 +161,19 @@ void on_access_token_received(GObject *source_object, GAsyncResult *res, gpointe
     }
 }
 
-// Handle account activation and get access token
+/*
+ * Handle account activation and get access token
+ */
+
 void on_account_activated(GoaObject *object, gpointer user_data) {
     GoaOAuth2Based *oauth2_based = GOA_OAUTH2_BASED(goa_object_peek_account(object));
     goa_oauth2_based_call_get_access_token(oauth2_based, NULL, on_access_token_received, NULL);
 }
 
-// Authenticate the user by ensuring credentials
+/*
+ * Authenticate the user by ensuring credentials
+ */
+
 void authenticate_user(GtkWidget *widget, gpointer data) {
     GList *accounts = goa_client_get_accounts(client);
 
@@ -142,7 +192,10 @@ void authenticate_user(GtkWidget *widget, gpointer data) {
     g_list_free_full(accounts, g_object_unref);
 }
 
-// Main function
+/*
+ * Main function
+ */
+
 int main(int argc, char *argv[]) {
     gtk_init(&argc, &argv);
 
