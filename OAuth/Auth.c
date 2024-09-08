@@ -1,7 +1,7 @@
 /*
  * Authentication functions for CUPS.
  *
- * Uses GNOME Online Accounts for authentication
+ * GNOME Online Accounts is used for authentication
  */
 
 /*
@@ -19,6 +19,7 @@
 #include <microhttpd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 /* 
  * Local server port 8080 is defined.
@@ -27,11 +28,9 @@
 #define PORT 8080
 
 /*
- * Client id and secret is also defined for authentication.
+ * Authorization and token URL is defined here.
  */
 
-#define CLIENT_ID "Ov23lirB62bclUpviNM1"
-#define CLIENT_SECRET "65ca463e0d048e12a0be7e8cc36073ba5c88bbe"
 #define AUTHORIZATION_URL "https://github.com/login/oauth/authorize"
 #define TOKEN_URL "https://github.com/login/oauth/access_token"
 
@@ -44,13 +43,49 @@ static GoaClient *client;
 GtkWidget *token_label;  // Define token_label here
 
 /*
+ * Function to load configuration from file
+ */
+
+void load_config(char **client_id, char **client_secret) {
+    FILE *file = fopen("config.cfg", "r");
+    if (file == NULL) {
+        g_error("Could not open config.cfg file");
+        return;
+    }
+
+    char line[256];
+    while (fgets(line, sizeof(line), file)) {
+        char *key = strtok(line, "=");
+        char *value = strtok(NULL, "\n");
+
+        if (key != NULL && value != NULL) {
+            if (strcmp(key, "CLIENT_ID") == 0) {
+                *client_id = g_strdup(value);
+                g_print("Loaded CLIENT_ID: %s\n", *client_id); // Debug print
+            } else if (strcmp(key, "CLIENT_SECRET") == 0) {
+                *client_secret = g_strdup(value);
+                g_print("Loaded CLIENT_SECRET: %s\n", *client_secret); // Debug print
+            }
+        } else {
+            g_warning("Malformed line in config.cfg: %s", line);
+        }
+    }
+
+    fclose(file);
+
+    if (*client_id == NULL || *client_secret == NULL) {
+        g_error("Client ID or Client Secret not found in config.cfg");
+    }
+}
+
+/*
  * Function to handle HTTP requests
  */
 
 static enum MHD_Result handle_request(void *cls, struct MHD_Connection *connection,
-                                       const char *url, const char *method,
-                                       const char *version, const char *upload_data,
-                                       size_t *upload_data_size, void **con_cls) {
+                                      const char *url, const char *method,
+                                      const char *version, const char *upload_data,
+                                      size_t *upload_data_size, void **con_cls) {
     if (strcmp(url, "/callback") == 0) {
         if (strcmp(method, "GET") == 0) {
             const char *code = MHD_lookup_connection_value(connection, MHD_GET_ARGUMENT_KIND, "code");
@@ -59,13 +94,23 @@ static enum MHD_Result handle_request(void *cls, struct MHD_Connection *connecti
                 auth_code = g_strdup(code);
                 g_print("Authorization code received: %s\n", auth_code);
 
+                char *client_id = NULL;
+                char *client_secret = NULL;
+                load_config(&client_id, &client_secret);
+
+                if (client_id == NULL || client_secret == NULL) {
+                    g_error("Client ID or Client Secret is NULL. Check config.cfg file.");
+                }
+
                 // Exchange authorization code for access token
                 gchar *post_data = g_strdup_printf("client_id=%s&client_secret=%s&code=%s",
-                                                    CLIENT_ID, CLIENT_SECRET, auth_code);
+                                                   client_id, client_secret, auth_code);
 
                 // Use libcurl here to POST `post_data` to TOKEN_URL and handle the response
 
                 g_free(post_data);
+                g_free(client_id);
+                g_free(client_secret);
             }
 
             const char *response = "<html><body><h1>Authentication successful! You can close this window.</h1></body></html>";
@@ -92,20 +137,30 @@ void start_local_server() {
 }
 
 /*
- *Function to start the OAuth2 flow
+ * Function to start the OAuth2 flow
  */
 
 void start_oauth_flow() {
+    char *client_id = NULL;
+    char *client_secret = NULL;
+    load_config(&client_id, &client_secret);
+
+    if (client_id == NULL) {
+        g_error("Client ID is NULL. Check config.cfg file.");
+    }
+
     gchar *auth_url = g_strdup_printf(
         "%s?client_id=%s&redirect_uri=http://localhost:8080/callback&scope=user",
-        AUTHORIZATION_URL, CLIENT_ID);
+        AUTHORIZATION_URL, client_id);
 
     g_print("Visit the following URL to authorize the application:\n%s\n", auth_url);
     g_free(auth_url);
+    g_free(client_id);
+    g_free(client_secret);
 }
 
 /*
- *Callback when the GoaClient is ready
+ * Callback when the GoaClient is ready
  */
 
 void on_goa_ready(GObject *source_object, GAsyncResult *res, gpointer user_data) {
@@ -125,7 +180,7 @@ void on_goa_ready(GObject *source_object, GAsyncResult *res, gpointer user_data)
 }
 
 /*
- *Initialize the GoaClient
+ * Initialize the GoaClient
  */
 
 void initialize_goa() {
